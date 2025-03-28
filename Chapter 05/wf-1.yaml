@@ -1,0 +1,23 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: daily-data-ingestion
+spec:
+  schedule: "5 4 * * *" #every day at 4AM
+  timezone: "America/Los_Angeles"
+  workflowSpec:
+    entrypoint: daily-data-ingestion
+    templates:
+      - name: daily-data-ingestion
+        steps:
+          - - name: list-csv-files
+              template: dummy
+          - - name: etl-job
+              template: dummy
+          - - name: data-quality-check
+              template: dummy
+      #list-csv-files step definition
+      - name: dummy
+        container:
+          image:  hello-world

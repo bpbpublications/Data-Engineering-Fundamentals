@@ -1,0 +1,48 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: daily-data-ingestion-v2
+spec:
+  schedule: "5 4 * * *" #every day at 4AM
+  timezone: "America/Los_Angeles"
+  workflowSpec:
+    entrypoint: daily-data-ingestion-v2
+    templates:
+      - name: daily-data-ingestion-v2
+        steps:
+          - - name: list-csv-files
+              template: list-csv-files
+          - - name: etl-job
+              template: etl-job
+              arguments:
+                parameters:
+                - name: csv-files
+                  value: "{{steps.list-csv-files.outputs.parameters.csv-files}}"
+
+          - - name: data-quality-check
+              template: data-quality-check
+      #list-csv-files step definition
+      - name: list-csv-files
+        container:
+          image:  alpine # <- of course change this to your own docker image
+          command: [sh, -c]
+          args: ["echo -n data1.csv data2.csv > /tmp/csv-files.txt"]
+        outputs: #  <- outputs of task
+          parameters:
+          - name: csv-files # name of output parameter
+            valueFrom:
+              path: /tmp/csv-files.txt 
+
+      #etl-job step definition
+      - name: etl-job
+        container:
+          image:  hello-world # <- of course change this to your own docker image
+        inputs: # <- inputs of task
+          parameters:
+          - name: csv-files
+
+      #data-quality-check step definition
+      - name: data-quality-check
+        container:
+          image:  hello-world # <- of course change this to your own docker image

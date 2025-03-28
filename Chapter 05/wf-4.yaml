@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: daily-data-ingestion-job-template
+spec:
+  entrypoint: daily-data-ingestion
+  arguments:
+    parameters:
+      - name: date
+        # use "yesterday" is a magic value to tell the script it needs to determine the day to run
+        value: yesterday
+  templates:
+    - name: daily-data-ingestion
+      inputs:
+        parameters:
+          - name: date
+      script:
+        image: alpine
+        command:
+          - sh
+        source: |
+          date="{{inputs.parameters.date}}"
+          if [ $date = yesterday ]; then
+            date=$(date -d yesterday +%Y-%m-%d)
+          fi
+          echo "run for $date"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: daily-data-ingestion-job
+spec:
+  # run daily at 2am
+  schedule: "0 2 * * *"
+  workflowSpec:
+    workflowTemplateRef:
+      name: daily-data-ingestion-job-template
+---
+# This version creates each job as part of the workflow, and limits concurrent jobs using
+# `spec.parallelism`
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: backfill-job
+spec:
+  entrypoint: main
+  # limit to one job at a time
+  parallelism: 1
+  templates:
+    - name: main
+      steps:
+        - - name: create-job
+            templateRef:
+              name: daily-data-ingestion-job-template
+              template: daily-data-ingestion
+            arguments:
+              parameters:
+                - name: date
+                  value: "{{item}}"
+            withSequence:
+              # run for the 1st to the 7th
+              start: "01"
+              end: "07"
+              format: "2024-01-%02X"

@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: customer-journey-data-bucket
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveAndDelete
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 365  # Move to Glacier after 1 year
+                StorageClass: GLACIER
+            ExpirationInDays: 730  # Delete after 2 years
+
+Outputs:
+  S3BucketName:
+    Value: !Ref MyS3Bucket
+    Description: Name of the S3 bucket with lifecycle rules applied

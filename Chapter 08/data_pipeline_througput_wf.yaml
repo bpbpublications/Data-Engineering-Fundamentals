@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: calculate-throughput-
+spec:
+  entrypoint: main
+  templates:
+  - name: main
+    steps:
+    - - name: start-pipeline
+        template: start-pipeline
+    - - name: process-data
+        template: process-data
+    - - name: end-pipeline
+        template: end-pipeline
+
+  - name: start-pipeline
+    script:
+      image: python:3.8
+      command: ["python"]
+      source: |
+        import time
+        # Record the start time
+        start_time = time.time()
+        # Save start time to an output parameter
+        print(f"start_time={start_time}")
+
+  - name: process-data
+    script:
+      image: data_pipeline_docker_image:latest
+
+  - name: end-pipeline
+    script:
+      image: python:3.8
+      command: ["python"]
+      source: |
+        import time
+        import os
+
+        # Function to get initial data size (implement as needed)
+        def get_input_data_size():
+            # Example size in bytes (1 GB)
+            return 1000000000
+
+        # Retrieve initial data size
+        initial_data_size = get_input_data_size()
+        # Retrieve the start time from an environment variable
+        start_time = float(os.environ['START_TIME'])
+
+        # Record the end time
+        end_time = time.time()
+
+        # Calculate the pipeline runtime
+        pipeline_runtime = end_time - start_time
+
+        # Calculate throughput in bytes/second
+        throughput = initial_data_size / pipeline_runtime
+        print(f"Pipeline Throughput: {throughput} bytes/second")
+
+      env:
+      - name: START_TIME
+        valueFrom:
+          parameter: "{{workflow.outputs.parameters.start-time}}"
+
+  outputs:
+    parameters:
+    - name: start-time
+      valueFrom:
+        path: /tmp/start_time
