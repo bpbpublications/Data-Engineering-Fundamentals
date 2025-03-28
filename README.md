@@ -1,2 +1,2 @@
-# Data Engineering for Beginners
- Data Engineering for Beginners, by BPB Publications
+# Data Engineering Fundamentals
+ Data Engineering Fundamentals, by BPB Publications
